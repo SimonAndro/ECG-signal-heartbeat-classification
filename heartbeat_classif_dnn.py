@@ -75,7 +75,7 @@ label, total = np.unique(labels, return_counts=True)
 # plt.plot(p_signal[:1000, 0])
 
 
-def make_dataset(record_names, num_sec, fs, abnormal):
+def make_dataset(record_names, num_sec, fs, non_normal_labels):
     # function for making dataset ignoring non-beats
     # input:
     # record_names - list of patients
@@ -215,7 +215,6 @@ plt.title('Training and validation loss')
 plt.legend()
 
 plt.show()
-
 
 # model evaluation
 model.evaluate(x_test, y_test)
