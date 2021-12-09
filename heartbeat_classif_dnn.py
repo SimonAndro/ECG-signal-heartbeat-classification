@@ -5,8 +5,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from sklearn.model_selection import train_test_split
+from keras import models
+from keras import layers
 
 from utilities import load_ecg_signal
+
+# force use CPU instead of GPU
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 # path to the dataset directory
 mit_bih_dir = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0'
@@ -95,7 +101,7 @@ def make_dataset(record_names, num_sec, fs, abnormal):
 
         p_signal, labels, samples, ok = load_ecg_signal(fname)
 
-        if  not ok: # ok is false
+        if not ok:  # ok is false
             continue
 
         # grab the first signal, the MLII(Modified Lead II)
@@ -103,9 +109,10 @@ def make_dataset(record_names, num_sec, fs, abnormal):
 
         # make df to exclude the nonbeats
         k_patient = pd.DataFrame({'labels': labels,
-                              'samples': samples})
+                                  'samples': samples})
 
-        k_patient = k_patient.loc[k_patient.labels.isin(non_normal_labels + ['N'])]
+        k_patient = k_patient.loc[k_patient.labels.isin(
+            non_normal_labels + ['N'])]
 
         X, Y, sym = build_XY(p_signal, k_patient, num_cols, non_normal_labels)
         sym_all = sym_all+sym
@@ -149,11 +156,66 @@ def build_XY(p_signal, df_ann, num_cols, abnormal):
     Y = Y[:max_row, :]
     return X, Y, sym
 
+
 num_sec = 3
 fs = 360
-X_all, Y_all, label_all = make_dataset(record_names, num_sec, fs, non_normal_labels)
+X_all, Y_all, label_all = make_dataset(
+    record_names,
+    num_sec,
+    fs,
+    non_normal_labels)
 
-print(X_all[:20], Y_all[:20], label_all[:20])
+# print(X_all[:20], Y_all[:20], label_all[:20])
 
-x_train, x_valid, y_train, y_valid = train_test_split(X_all, Y_all, test_size=0.33, random_state=42)
+# split train, and test data
+x_train, x_test, y_train, y_test = train_test_split(
+    X_all, Y_all,
+    test_size=0.33,
+    random_state=42)
 
+# define the model
+model = models.Sequential()
+model.add(layers.Dense(32, activation='relu', input_dim=x_train.shape[1]))
+model.add(layers.Dense(1, activation='sigmoid'))
+
+# compile the model
+model.compile(loss='binary_crossentropy',
+              optimizer='rmsprop',
+              metrics=['acc'])
+
+# model training
+history = model.fit(x_train,
+                    y_train,
+                    validation_split=0.5,
+                    batch_size=64,
+                    epochs=20,
+                    verbose=1
+                    )
+
+print(history.history)
+
+# performance plot
+acc = history.history['acc']
+val_acc = history.history['val_acc']
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+epochs = range(1, len(acc) + 1)
+
+plt.plot(epochs, acc, 'bo', label='Training acc')
+plt.plot(epochs, val_acc, 'b', label='Validation acc')
+plt.title('Training and validation acc')
+plt.legend()
+
+plt.figure()
+
+plt.plot(epochs, loss, 'bo', label='Training loss')
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.legend()
+
+plt.show()
+
+
+# model evaluation
+model.evaluate(x_test, y_test)
