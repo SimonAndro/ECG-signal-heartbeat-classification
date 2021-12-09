@@ -4,6 +4,8 @@ import wfdb
 import matplotlib.pyplot as plt
 import numpy as np
 
+from sklearn.model_selection import train_test_split
+
 from utilities import load_ecg_signal
 
 # path to the dataset directory
@@ -152,3 +154,6 @@ fs = 360
 X_all, Y_all, label_all = make_dataset(record_names, num_sec, fs, non_normal_labels)
 
 print(X_all[:20], Y_all[:20], label_all[:20])
+
+x_train, x_valid, y_train, y_valid = train_test_split(X_all, Y_all, test_size=0.33, random_state=42)
+
