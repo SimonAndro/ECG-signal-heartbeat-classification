@@ -2,7 +2,7 @@
 
 This project uses the MIT/BIH database for the evalaution of the model, the MIT/BIH database has over 15 beat classifications and over 20 non beat classifcations.
 
-According to the Association for Advancement of Medical Instrumentation(AAMI) heartbeat classification standard, 1998-2008;ISO EC57, the heartbeats are classified into 5 categories namely: 
+According to the Association for Advancement of Medical Instrumentation(AAMI) heartbeat classification standard in AAMI ISO EC57:1998(R2008), the heartbeats are classified into 5 categories namely: 
 1. Normal(N)
 2. Supraventricular(S) ectopic
 3. Ventricular(V) ectopic
