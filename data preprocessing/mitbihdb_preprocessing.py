@@ -104,8 +104,6 @@ for k in range(0,2): # first and second dataset
                     right_pad = beat_end - p_signal.size
                     beat_end = p_signal.size
 
-                print(beat_end-beat_start, sym,i)
-
                 # grab single beat                    
                 single_beat = p_signal[beat_start:beat_end]
                 single_beat = np.pad(single_beat,(left_pad, right_pad),mode='edge')
