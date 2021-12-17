@@ -72,8 +72,8 @@ for k in range(0,2): # first and second dataset
                 if ndx.size: # indice array isn't empty
                     symbols[ndx] = cat
 
-        label, total = np.unique(symbols, return_counts=True)
-        print(label, total)
+        # label, total = np.unique(symbols, return_counts=True)
+        # print(label, total)
         
         ## extract individual beats
         Rpeak_left = 103
