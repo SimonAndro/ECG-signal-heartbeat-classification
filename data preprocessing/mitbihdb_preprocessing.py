@@ -31,8 +31,8 @@ for k in range(0,2): # first and second dataset
     if k == 0: 
         record_names = DS1
         ds_dir = 'train_set'
-        sample_name = 'train_samples.hd5'
-        label_name = 'train_labels.hd5'
+        sample_name = 'train_samples.hdf'
+        label_name = 'train_labels.hdf'
     else:
         record_names = DS2
         ds_dir = 'test_set'
