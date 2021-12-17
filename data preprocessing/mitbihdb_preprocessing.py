@@ -36,8 +36,8 @@ for k in range(0,2): # first and second dataset
     else:
         record_names = DS2
         ds_dir = 'test_set'
-        sample_name = 'test_samples.hd5'
-        label_name = 'test_labels.hd5'      
+        sample_name = 'test_samples.hdf'
+        label_name = 'test_labels.hdf'      
     
     save_dir = os.path.join(mit_bih_dest,ds_dir+'/')
 
