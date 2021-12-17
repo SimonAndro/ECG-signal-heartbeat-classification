@@ -21,8 +21,12 @@ nonbeat_labels = ['[', '!'	, ']'	, 'x'	, '('	, ')'	, 'p'	, 't'	, 'u'	, '`',
                   '\'', '^'	, '|'	, '~'	,     '+'	, 's'	, 'T'	, '*'	, 'D'	,
                   '='	, '"', '@'	, ]
 
-# patient list, 100 through 234
-record_names = np.arange(100, 235)
+# records for data set one (classification model)
+DS1 = [101, 106, 108,109, 112, 114, 115, 116, 118, 119, 122, 124, 201, 203, 205, 207, 208, 209, 215, 220, 223,230]
+# records for data set two (test model)
+DS2 = [100, 103, 105,111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234]
+
+record_names = np.concatenate(DS1,DS2)
 
 for record_name in record_names:
     fname = os.path.join(mit_bih_dir, str(record_name))
@@ -47,22 +51,6 @@ for record_name in record_names:
     aami_ann.to_csv(os.path.join(mit_bir_dest,str(record_name)+'_label.csv')) # write csv file
     print(record_name)
     
-
-#     k_patient = pd.DataFrame(
-#         {'label': label, 'total': total, 'patient': record_name})
-
-
-#     # a data frame for a single patient
-#     label, total = np.unique(labels, return_counts=True)
-#     k_patient = pd.DataFrame(
-#         {'label': label, 'total': total, 'patient': record_name})
-
-#     dataframe = pd.concat([dataframe, k_patient], axis=0)
-
-
-# total_by_label = dataframe.groupby(
-#     'label').total.sum().sort_values(ascending=False)
-# # print(total_by_label)  # !debug, peek at the total by label
 
 
 
