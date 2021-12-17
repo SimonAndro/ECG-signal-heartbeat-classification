@@ -30,14 +30,14 @@ DS2 = [100, 103, 105,111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219,
 for k in range(0,2): # first and second dataset
     if k == 0: 
         record_names = DS1
-        ds_dir = 'test_set'
-        sample_name = 'test_samples.hd5'
-        label_name = 'test_labels.hd5'
-    else:
-        record_names = DS2
         ds_dir = 'train_set'
         sample_name = 'train_samples.hd5'
         label_name = 'train_labels.hd5'
+    else:
+        record_names = DS2
+        ds_dir = 'test_set'
+        sample_name = 'test_samples.hd5'
+        label_name = 'test_labels.hd5'      
     
     save_dir = os.path.join(mit_bih_dest,ds_dir+'/')
 
@@ -110,9 +110,6 @@ for k in range(0,2): # first and second dataset
                 single_beat = p_signal[beat_start:beat_end]
                 single_beat = np.pad(single_beat,(left_pad, right_pad),mode='edge')
 
-                print(x_samples.size, '/n')
-                print(single_beat.size, '/n')
-
                 # append to beat array
                 if x_samples.size == 0: # first beat
                     x_samples = np.array(single_beat)
@@ -130,14 +127,12 @@ for k in range(0,2): # first and second dataset
 
             i = i + 1 # increment i
 
-        print(y_labels)
         # save samples and labels
         x_df = pd.DataFrame({'samples':x_samples}) # samples
         y_df = pd.DataFrame({'labels':y_labels}) # labels
 
         x_df.to_hdf(os.path.join(save_dir+sample_name), key='samples_'+str(record_name))
-        y_df.to_hdf(os.path.join(save_dir+label_name), key='labels_'+str(record_name))
-        
+        y_df.to_hdf(os.path.join(save_dir+label_name), key='labels_'+str(record_name))        
 
         # aami_ann = pd.DataFrame({'symbol':symbols,'sample':samples}) # new annotations dataframe
         # aami_ann.to_csv(os.path.join(mit_bih_dest,str(record_name)+'_label.csv')) # write csv file
