@@ -27,6 +27,13 @@ DS1 = ['101', '106', '108','109', '112', '114', '115', '116', '118', '119', '122
 # records for data set two (test model)
 DS2 = ['100', '103', '105','111', '113', '117', '121', '123', '200', '202', '210', '212', '213', '214', '219', '221', '222', '228', '231', '232', '233', '234']
 
+def normalize(data):      
+    data = np.nan_to_num(data)  # removing NaNs and Infs
+    data = preprocessing.minmax_scale(p_signal, feature_range=(0, 1), axis=0, copy=True)
+    # data = data - np.mean(data)
+    # data = data / np.std(data)
+    return data
+            
 for k in range(0,2): # first and second dataset
     if k == 0: 
         record_names = DS1
@@ -80,10 +87,10 @@ for k in range(0,2): # first and second dataset
         Rpeak_right = 247
 
         # pad signal incase of array overflow on extracting beat
-        p_signal = p_signal[:,0] # MLII
+        p_signal = p_signal[:,0] # MLII        
         
         # normalize between 0 and 1
-        p_signal = preprocessing.minmax_scale(p_signal, feature_range=(0, 1), axis=0, copy=True)    
+        p_signal = normalize(p_signal)  
 
         # loop over beat annotations
         i = 0
