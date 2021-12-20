@@ -34,7 +34,7 @@ def build_model(input_shape):
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['mae'])
     return model
 
-num_epochs = 3
+num_epochs = 20
 all_scores = []
 all_mae_histories = []
 
@@ -94,7 +94,7 @@ for k in DS1: # k is the validation fold
                         partial_train_data,
                         partial_train_targets,
                         epochs=num_epochs, 
-                        batch_size=256, 
+                        batch_size=512, 
                         verbose=1)
     mae_history = history.history['mae']
     all_mae_histories.append(mae_history)
@@ -119,7 +119,9 @@ def smooth_curve(points, factor=0.9):
     return smoothed_points
 
 
-smooth_mae_history = smooth_curve(average_mae_history[10:])
+print(average_mae_history)
+smooth_mae_history = smooth_curve(average_mae_history)
+print(smooth_mae_history)
 
 plt.plot(range(1, len(smooth_mae_history) + 1), smooth_mae_history)
 plt.xlabel('Epochs')
