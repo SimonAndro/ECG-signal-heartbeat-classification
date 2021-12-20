@@ -14,207 +14,114 @@ from utilities import load_ecg_signal
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-# path to the dataset directory
-mit_bih_dir = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0'
+# path to the test and train datasets
+mit_bih_dir = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0-aami_annotations'
+train_ds_dir = os.path.join(mit_bih_dir,"train_set/")
+test_ds_dir = os.path.join(mit_bih_dir, "test_set/")
 
-# patient list, 100 to 234
-record_names = np.arange(100, 235)
+# records for data set one (classification model)
+DS1 = ['101', '106', '108','109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', '208', '209', '215', '220', '223','230']
+# records for data set two (test model)
+DS2 = ['100', '103', '105','111', '113', '117', '121', '123', '200', '202', '210', '212', '213', '214', '219', '221', '222', '228', '231', '232', '233', '234']
 
-dataframe = pd.DataFrame()
+# building the network
+def build_model(input_shape):
+    model = models.Sequential()
+    model.add(layers.Dense(64, activation='relu',
+                           input_shape=(input_shape,)))
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(1))
+    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['mae'])
+    return model
 
-for record_name in record_names:
-    fname = os.path.join(mit_bih_dir, str(record_name))
+num_epochs = 3
+all_scores = []
+all_mae_histories = []
 
-    try:  # some numbers don't exist in the records
-        annotation = wfdb.rdann(fname, 'atr')
-    except:
-        continue
+def char_to_num(data):
 
-    labels = annotation.symbol
+    classes = {'F':0,'N':1,'Q':2,'S':3,'V':4}
 
-    # a data frame for a single patient
-    label, total = np.unique(labels, return_counts=True)
-    k_patient = pd.DataFrame(
-        {'label': label, 'total': total, 'patient': record_name})
+    print(np.unique(data), "unique classes")
+    print(data.shape, "before char to num")
 
-    dataframe = pd.concat([dataframe, k_patient], axis=0)
+    for cl in classes:
+        data = [classes[cl] if sym == cl else sym for sym in data]
 
+    data = np.array(data, dtype=np.int32)
+        
+    print(np.unique(data), "unique classes")
+    print(data.shape, "after char to num")
 
-total_by_label = dataframe.groupby(
-    'label').total.sum().sort_values(ascending=False)
-# print(total_by_label)  # !debug, peek at the total by label
+    return data
 
-# normal, abnormal and non-beat labels
-non_normal_labels = ['L', 'R', 'B', 'A', 'a', 'J', 'S', 'V', 'r', 'F', 'e', 'j', 'n', 'E',
-                     '/', 'f', 'Q', '?', ]
-nonbeat_labels = ['[', '!'	, ']'	, 'x'	, '('	, ')'	, 'p'	, 't'	, 'u'	, '`',
-                  '\'', '^'	, '|'	, '~'	,     '+'	, 's'	, 'T'	, '*'	, 'D'	,
-                  '='	, '"', '@'	, ]
+for k in DS1: # k is the validation fold
+    print('processing fold #', k)
+    val_data = np.load(train_ds_dir+k+'_samples.npy')
+    val_targets = char_to_num(np.load(train_ds_dir+k+'_labels.npy'))
 
-# -1 for non-heartbeat labels
-dataframe['category'] = -1
+    # print(val_data.shape, val_targets.shape)
 
-# 0 for normal heart beat labels
-dataframe.loc[dataframe.label == 'N', 'category'] = 0
+    partial_train_data = np.array([])
+    partial_train_targets = np.array([])
+    for d in DS1:
 
-# 1 for non normal heart beat labels
-dataframe.loc[dataframe.label.isin(non_normal_labels), 'category'] = 1
+        if d==k: continue # exclude current fold from train data
 
-total_by_category = dataframe.groupby('category').total.sum()
-# print(total_by_category)  # !debug, peek at the total by category
+        data = np.load(train_ds_dir+d+'_samples.npy')
+        targets = np.load(train_ds_dir+d+'_labels.npy')
 
-fname = os.path.join(mit_bih_dir, str(record_names[0]))
-p_signal, labels, samples, ok = load_ecg_signal(fname)
-label, total = np.unique(labels, return_counts=True)
+        # print(np.isnan(data))
 
-# for l, t in zip(label, total):
-#     # print(l, t)  # !debug, peak at label and total
+        # print(data.shape, targets.shape)
 
-# !debug, visualize part of the physical signal
-# plt.figure()
-# plt.plot(p_signal[:1000, 0])
+        # append to beat array
+        if partial_train_data.size == 0: # first beat
+            partial_train_data = np.array(data)
+            partial_train_targets = np.array(targets)
+        else:                   
+            partial_train_data = np.vstack((partial_train_data,data))
+            partial_train_targets = np.append(partial_train_targets,targets)
 
+    print(partial_train_data.shape, partial_train_targets.shape)
+    
+   
+    partial_train_targets = char_to_num(partial_train_targets)
+    
+    print(np.unique(partial_train_targets), "about to build")
+    model = build_model(partial_train_data.shape[1])
+    history = model.fit(
+                        partial_train_data,
+                        partial_train_targets,
+                        epochs=num_epochs, 
+                        batch_size=256, 
+                        verbose=1)
+    mae_history = history.history['mae']
+    all_mae_histories.append(mae_history)
+    val_mse, val_mae = model.evaluate(val_data, val_targets, verbose=0)
+    all_scores.append(val_mae)
 
-def make_dataset(record_names, num_sec, fs, non_normal_labels):
-    # function for making dataset ignoring non-beats
-    # input:
-    # record_names - list of patients
-    # num_sec = number of seconds to include before and after the beat
-    # fs = frequency
-    # output:
-    #   X_all = signal (nbeats , num_sec * fs columns)
-    #   Y_all = binary is abnormal (nbeats, 1)
-    #   sym_all = beat annotation symbol (nbeats,1)
+print(all_scores)
+print(np.mean(all_scores))
 
-    # initialize numpy arrays
-    num_cols = 2*num_sec * fs
-    X_all = np.zeros((1, num_cols))
-    Y_all = np.zeros((1, 1))
-    sym_all = []
-
-    # list to keep track of number of beats across patients
-    max_rows = []
-
-    for record_name in record_names:
-
-        fname = os.path.join(mit_bih_dir, str(record_name))
-
-        p_signal, labels, samples, ok = load_ecg_signal(fname)
-
-        if not ok:  # ok is false
-            continue
-
-        # grab the first signal, the MLII(Modified Lead II)
-        p_signal = p_signal[:, 0]
-
-        # make df to exclude the nonbeats
-        k_patient = pd.DataFrame({'labels': labels,
-                                  'samples': samples})
-
-        k_patient = k_patient.loc[k_patient.labels.isin(
-            non_normal_labels + ['N'])]
-
-        X, Y, sym = build_XY(p_signal, k_patient, num_cols, non_normal_labels)
-        sym_all = sym_all+sym
-        max_rows.append(X.shape[0])
-        X_all = np.append(X_all, X, axis=0)
-        Y_all = np.append(Y_all, Y, axis=0)
-
-    # drop the first zero row
-    X_all = X_all[1:, :]
-    Y_all = Y_all[1:, :]
-
-    # check sizes make sense
-    assert np.sum(
-        max_rows) == X_all.shape[0], 'number of X, max_rows rows messed up'
-    assert Y_all.shape[0] == X_all.shape[0], 'number of X, Y rows messed up'
-    assert Y_all.shape[0] == len(sym_all), 'number of Y, sym rows messed up'
-    return X_all, Y_all, sym_all
+average_mae_history = [
+    np.mean([x[i] for x in all_mae_histories]) for i in range(num_epochs)]
 
 
-def build_XY(p_signal, df_ann, num_cols, abnormal):
-    # this function builds the X,Y matrices for each beat
-    # it also returns the original symbols for Y
-
-    num_rows = len(df_ann)
-    X = np.zeros((num_rows, num_cols))
-    Y = np.zeros((num_rows, 1))
-    sym = []
-
-    # keep track of rows
-    max_row = 0
-    for atr_sample, atr_sym in zip(df_ann.samples.values, df_ann.labels.values):
-        left = max([0, (atr_sample - num_sec*fs)])
-        right = min([len(p_signal), (atr_sample + num_sec*fs)])
-        x = p_signal[left: right]
-        if len(x) == num_cols:
-            X[max_row, :] = x
-            Y[max_row, :] = int(atr_sym in abnormal)
-            sym.append(atr_sym)
-            max_row += 1
-    X = X[:max_row, :]
-    Y = Y[:max_row, :]
-    return X, Y, sym
+def smooth_curve(points, factor=0.9):
+    smoothed_points = []
+    for point in points:
+        if smoothed_points:
+            previous = smoothed_points[-1]
+            smoothed_points.append(previous * factor + point * (1 - factor))
+        else:
+            smoothed_points.append(point)
+    return smoothed_points
 
 
-num_sec = 3
-fs = 360
-X_all, Y_all, label_all = make_dataset(
-    record_names,
-    num_sec,
-    fs,
-    non_normal_labels)
+smooth_mae_history = smooth_curve(average_mae_history[10:])
 
-# print(X_all[:20], Y_all[:20], label_all[:20])
-
-# split train, and test data
-x_train, x_test, y_train, y_test = train_test_split(
-    X_all, Y_all,
-    test_size=0.33,
-    random_state=42)
-
-# define the model
-model = models.Sequential()
-model.add(layers.Dense(32, activation='relu', input_dim=x_train.shape[1]))
-model.add(layers.Dense(1, activation='sigmoid'))
-
-# compile the model
-model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
-              metrics=['acc'])
-
-# model training
-history = model.fit(x_train,
-                    y_train,
-                    validation_split=0.5,
-                    batch_size=64,
-                    epochs=20,
-                    verbose=1
-                    )
-
-print(history.history)
-
-# performance plot
-acc = history.history['acc']
-val_acc = history.history['val_acc']
-loss = history.history['loss']
-val_loss = history.history['val_loss']
-
-epochs = range(1, len(acc) + 1)
-
-plt.plot(epochs, acc, 'bo', label='Training acc')
-plt.plot(epochs, val_acc, 'b', label='Validation acc')
-plt.title('Training and validation acc')
-plt.legend()
-
-plt.figure()
-
-plt.plot(epochs, loss, 'bo', label='Training loss')
-plt.plot(epochs, val_loss, 'b', label='Validation loss')
-plt.title('Training and validation loss')
-plt.legend()
-
+plt.plot(range(1, len(smooth_mae_history) + 1), smooth_mae_history)
+plt.xlabel('Epochs')
+plt.ylabel('Validation MAE')
 plt.show()
-
-# model evaluation
-model.evaluate(x_test, y_test)
