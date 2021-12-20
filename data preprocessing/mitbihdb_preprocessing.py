@@ -23,9 +23,9 @@ heartbeat_classes = [
 known_classes = np.array(['N','S','V','F','Q'])
 
 # records for data set one (classification model)
-DS1 = [101, 106, 108,109, 112, 114, 115, 116, 118, 119, 122, 124, 201, 203, 205, 207, 208, 209, 215, 220, 223,230]
+DS1 = ['101', '106', '108','109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', '208', '209', '215', '220', '223','230']
 # records for data set two (test model)
-DS2 = [100, 103, 105,111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234]
+DS2 = ['100', '103', '105','111', '113', '117', '121', '123', '200', '202', '210', '212', '213', '214', '219', '221', '222', '228', '231', '232', '233', '234']
 
 for k in range(0,2): # first and second dataset
     if k == 0: 
@@ -106,17 +106,19 @@ for k in range(0,2): # first and second dataset
 
                 # grab single beat                    
                 single_beat = p_signal[beat_start:beat_end]
-                single_beat = np.pad(single_beat,(left_pad, right_pad),mode='edge')
+                single_beat = np.pad(single_beat,(left_pad, right_pad),mode='edge')                
 
                 # append to beat array
                 if x_samples.size == 0: # first beat
                     x_samples = np.array(single_beat)
                     y_labels = np.array(sym)
                 else:                   
-                    np.vstack((x_samples,single_beat))
+                    x_samples = np.vstack((x_samples,single_beat))
                     y_labels = np.append(y_labels,sym)
-                            
-                print((i, sym, samples[i]))
+
+                #print(x_samples.shape, y_labels.shape)
+
+                #print((i, sym, samples[i]))
                 # plt.plot(single_beat)
                 # plt.show()
                 # plt.title('i is'+str(i))
@@ -124,16 +126,8 @@ for k in range(0,2): # first and second dataset
 
 
             i = i + 1 # increment i
-
-        # save samples and labels
-        x_df = pd.DataFrame({'samples':x_samples}) # samples
-        y_df = pd.DataFrame({'labels':y_labels}) # labels
-
-        x_df.to_hdf(os.path.join(save_dir+sample_name), key='samples_'+str(record_name))
-        y_df.to_hdf(os.path.join(save_dir+label_name), key='labels_'+str(record_name))        
-
-        # aami_ann = pd.DataFrame({'symbol':symbols,'sample':samples}) # new annotations dataframe
-        # aami_ann.to_csv(os.path.join(mit_bih_dest,str(record_name)+'_label.csv')) # write csv file
-        # print(record_name)
+        print(record_name)
         
-
+        # save samples and labels
+        np.save(os.path.join(save_dir,record_name+'_samples'), x_samples)  
+        np.save(os.path.join(save_dir,record_name+'_labels'), y_labels)  
