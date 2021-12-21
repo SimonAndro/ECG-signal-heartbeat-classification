@@ -43,7 +43,7 @@ def build_model(input_shape):
     return model
 
 
-num_epochs = 20
+num_epochs = 1
 all_scores = []
 all_trainloss_histories = []
 all_valloss_histories = []
@@ -53,16 +53,16 @@ classes = {'F': 0, 'N': 1, 'Q': 2, 'S': 3, 'V': 4}
 # convert label characters to number representation
 def char_to_num(data):    
 
-    print(np.unique(data), "unique classes")
-    print(data.shape, "before char to num")
+    # print(np.unique(data), "unique classes")
+    # print(data.shape, "before char to num")
 
     for cl in classes:
         data = [classes[cl] if sym == cl else sym for sym in data]
 
     data = np.array(data, dtype=np.int32)
 
-    print(np.unique(data), "unique classes")
-    print(data.shape, "after char to num")
+    # print(np.unique(data), "unique classes")
+    # print(data.shape, "after char to num")
 
     return data
 
@@ -90,8 +90,10 @@ for k in DS2:  # data in test set
 
 test_targets = labels_to_one_hot(char_to_num(test_targets))
 
+fold = 1
 for k in DS1:  # k is the validation fold
-    print('processing fold #', k)
+    print('processing fold #', fold)
+    fold= fold + 1
     val_data = np.load(train_ds_dir+k+'_samples.npy')
     val_targets = labels_to_one_hot(char_to_num(np.load(train_ds_dir+k+'_labels.npy')))
 
@@ -119,11 +121,11 @@ for k in DS1:  # k is the validation fold
             partial_train_data = np.vstack((partial_train_data, data))
             partial_train_targets = np.append(partial_train_targets, targets)
 
-    print(partial_train_data.shape, partial_train_targets.shape)
+    # print(partial_train_data.shape, partial_train_targets.shape)
 
     partial_train_targets = labels_to_one_hot(char_to_num(partial_train_targets))
 
-    print(np.unique(partial_train_targets), "about to build")
+    # print(np.unique(partial_train_targets), "about to build")
     model = build_model(partial_train_data.shape[1])
     
     # print(model.summary()) #print model summary
@@ -132,8 +134,8 @@ for k in DS1:  # k is the validation fold
         partial_train_data,
         partial_train_targets,
         epochs=num_epochs,
-        batch_size=512,
-        verbose=1,
+        batch_size=1024,
+        verbose=0,
         validation_data=(val_data, val_targets))
     training_loss_history = history.history['loss']
     validation_loss_history = history.history['val_loss']
@@ -141,10 +143,10 @@ for k in DS1:  # k is the validation fold
     all_valloss_histories.append(validation_loss_history)
     all_trainloss_histories.append(training_loss_history)
     val_result = model.evaluate(test_data, test_targets, verbose=0)
-    print(val_result)
+    # print(val_result)
     all_scores.append(val_result)
 
-print(all_scores)
+# print(all_scores)
 
 # evaluation of training
 epochs = range(1, len(validation_loss_history)+1)
@@ -166,19 +168,19 @@ print(f"accuracy on test data:{results[1]}")
 predictions = model.predict(test_data)
 
 print(predictions[0])
-prediction_indx = np.where(math.isclose(np.array(predictions[0]), np.amax(np.array(predictions[0])), rel_tol=1e-5))
+max_prob = np.amax(np.array(predictions[0]))
+prediction_indx = np.where(np.array(predictions[0]) == max_prob)
 
 title = "beat is class: "
 i = 0
 for key in classes:
     if(i == prediction_indx):
-        title+key
+        title+key+" confidence: "+str(max_prob)
         break
     i = i+1
 
-
 single_beat = test_data[0]
 plt.plot(single_beat)
-plt.show(title)
-plt.title('beat is class ' +str(i))
-plt.pause(0.001)
+plt.title(title)
+plt.show()
+
