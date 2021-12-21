@@ -4,6 +4,7 @@ import wfdb
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import operator
 
 from sklearn.model_selection import train_test_split
 from keras import models
@@ -168,14 +169,14 @@ print(f"accuracy on test data:{results[1]}")
 predictions = model.predict(test_data)
 
 print(predictions[0])
-max_prob = np.amax(np.array(predictions[0]))
-prediction_indx = np.where(np.array(predictions[0]) == max_prob)
+
+index_max, value_max = max(enumerate(predictions[0]), key=operator.itemgetter(1))
 
 title = "beat is class: "
 i = 0
 for key in classes:
-    if(i == prediction_indx):
-        title+key+" confidence: "+str(max_prob)
+    if(i == index_max):
+        title = title+key+" confidence: "+str(value_max)
         break
     i = i+1
 
