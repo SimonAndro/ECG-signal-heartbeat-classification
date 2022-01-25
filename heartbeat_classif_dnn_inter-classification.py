@@ -33,9 +33,9 @@ DS2 = ['100', '103', '105', '111', '113', '117', '121', '123', '200', '202', '21
 
 def build_model(input_shape):
     model = models.Sequential()
-    model.add(layers.Dense(64, activation='relu',
+    model.add(layers.Dense(200, activation='tanh',
                            input_shape=(input_shape,)))
-    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(50, activation='tanh'))
     # end with a softmax layer with 5 units since we have 5 classes to predict
     model.add(layers.Dense(5, activation='softmax'))
     model.compile(optimizer='rmsprop',
@@ -44,7 +44,7 @@ def build_model(input_shape):
     return model
 
 
-num_epochs = 1
+num_epochs = 50
 all_scores = []
 all_trainloss_histories = []
 all_valloss_histories = []
@@ -131,6 +131,8 @@ for k in DS1:  # k is the validation fold
     
     # print(model.summary()) #print model summary
 
+    print(partial_train_data.dtype)
+
     history = model.fit(
         partial_train_data,
         partial_train_targets,
@@ -176,7 +178,7 @@ title = "beat is class: "
 i = 0
 for key in classes:
     if(i == index_max):
-        title = title+key+" confidence: "+str(value_max)
+        title = title+key+" confidence: "+str(value_max)+"actual class is "+str(test_targets[0])
         break
     i = i+1
 
