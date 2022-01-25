@@ -31,9 +31,14 @@ train_data, test_data, train_targets, test_targets = train_test_split(data, targ
 #train validation split
 train_data, val_data, train_targets, val_targets = train_test_split(train_data, train_targets, test_size=0.2,shuffle=True)
 
-# prediction data statistics
+classes = {'F': 0, 'N': 1, 'Q': 2, 'S': 3, 'V': 4}
+
+# test data statistics
 label_total = test_targets.sum(axis=0)
-print("prediction data statistics", label_total)
+
+label_total = [(c, label_total[classes[c]]) for c in classes]
+
+print("test data statistics", label_total)
 
 # plt.figure()
 # plt.plot(train_data[100])
@@ -95,7 +100,6 @@ predictions = model.predict(test_data)
 
 index_max, value_max = max(enumerate(predictions[0]), key=operator.itemgetter(1))
 
-classes = {'F': 0, 'N': 1, 'Q': 2, 'S': 3, 'V': 4}
 title = "beat is class: "
 i = 0
 for key in classes:
