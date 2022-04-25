@@ -5,7 +5,7 @@ import wfdb
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
-
+import pywt
 mit_bih_dir = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0'
 mit_bih_dest = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0-aami_annotations'
 
@@ -23,7 +23,7 @@ heartbeat_classes = [
 known_classes = np.array(['N','S','V','F','Q'])
 
 #combined dataset
-DS = ['101', '106', '108', '109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', 
+DS = ['117', '101', '106', '108', '109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', 
         '208', '209', '215', '220', '223', '230', '100', '103', '105', '111', '113', '117', '121', '123', '200', '202', '210',
         '212', '213', '214', '219', '221', '222', '228', '231', '232', '233', '234']
 
@@ -33,6 +33,38 @@ def normalize(data):
     data = np.nan_to_num(data)  # removing NaNs and Infs
     data = preprocessing.minmax_scale(p_signal, feature_range=(0, 1), axis=0, copy=True)
     return data
+
+
+def ecg_denoise(ecg,symbol):
+
+    data = []
+    for i in range(len(ecg) - 1):
+        Y = ecg[i]
+        Y = Y.astype(float)
+        data.append(Y)
+
+    # Create wavelet object and define parameters
+    w = pywt.Wavelet('db5')  # 选用Daubechies8小波
+
+    # Decompose into wavelet components, to the level selected:
+    coeffs = pywt.wavedec(data, 'db8', level=8)  # 将信号进行小波分解
+
+    #小波重构
+    denoised_ecg = pywt.waverec(np.multiply(coeffs, [0, 1, 1, 1, 1,1,1,1,1]).tolist(), 'db8')  # 将信号进行小波重构
+
+    #提取R波
+    # 将读取到的annatations的心拍绘制到心电图上
+    plt.figure()
+    plt.plot(ecg[258840:260280])
+
+    plt.figure()
+    plt.plot(denoised_ecg[258840:260280])
+
+    plt.show()
+
+    return denoised_ecg
+        
+
 
 
 classes = {'F': 0, 'N': 1, 'Q': 2, 'S': 3, 'V': 4}
@@ -95,6 +127,16 @@ for record_name in DS:
     symbols = np.array(annotation.symbol)
     samples = np.array(annotation.sample)
     p_signal = record.p_signal    # extract signal
+    ## extract lead two channel
+    if record_name == "114": #this record has inverted channels
+        p_signal = p_signal[:,1] # MLII      
+    else:
+        p_signal = p_signal[:,0] # MLII   
+
+    denoised = ecg_denoise(p_signal, symbols)
+    p_signal = denoised
+
+    continue
 
     # test plot
     # plt.plot(p_signal[63315-5000:63315+500,0])
@@ -107,10 +149,7 @@ for record_name in DS:
                 symbols[ndx] = cat
 
     # label, total = np.unique(symbols, return_counts=True)
-    # print(label, total)
-
-    ## extract individual beats
-    p_signal = p_signal[:,0] # MLII        
+    # print(label, total)  
     
     # normalize between 0 and 1
     p_signal = normalize(p_signal)  
@@ -169,3 +208,4 @@ print(y_labels)
 # save samples and labels
 np.save(os.path.join(save_dir,'beat_samples'), x_samples)  
 np.save(os.path.join(save_dir,'beat_labels'), y_labels)  
+
