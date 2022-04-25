@@ -6,6 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
 
+import pywt
+from scipy import signal
+
+
 mit_bih_dir = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0'
 mit_bih_dest = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0-aami_annotations'
 
@@ -26,6 +30,55 @@ known_classes = np.array(['N','S','V','F','Q'])
 DS1 = ['101', '106', '108','109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', '208', '209', '215', '220', '223','230']
 # records for data set two (test model)
 DS2 = ['100', '103', '105','111', '113', '117', '121', '123', '200', '202', '210', '212', '213', '214', '219', '221', '222', '228', '231', '232', '233', '234']
+
+
+
+def ecg_denoise(ecg,symbol):
+
+    ##
+    #remove baselinewander
+    ##
+    data = []
+    for i in range(len(ecg) - 1):
+        Y = ecg[i]
+        Y = Y.astype(float)
+        data.append(Y)
+
+    # Create wavelet object and define parameters
+    w = pywt.Wavelet('db5')  # 选用Daubechies8小波
+
+    # Decompose into wavelet components, to the level selected:
+    coeffs = pywt.wavedec(data, 'db8', level=8)  # 将信号进行小波分解
+
+    #小波重构
+    bw_denoised = pywt.waverec(np.multiply(coeffs, [0, 1, 1, 1, 1,1,1,1,1]).tolist(), 'db8')  # 将信号进行小波重构
+
+    #提取R波
+    # 将读取到的annatations的心拍绘制到心电图上
+    plt.figure()
+    plt.plot(ecg[258840:260280])
+    plt.title("orignal signal")
+
+    plt.figure()
+    plt.plot(bw_denoised[258840:260280])
+    plt.title("after basewander removal")
+
+    ##
+    #remove baselinewander
+    ##
+    b, a = signal.butter(8, 0.1, 'lowpass')   #配置滤波器 8 表示滤波器的阶数
+    ecg_1 = signal.filtfilt(b, a, bw_denoised)  #dbw_denoised为要过滤的信号
+    b, a = signal.butter(8, 0.007, 'highpass')
+    denoised_ecg = signal.filtfilt(b, a,ecg_1 ) 
+
+    plt.figure()
+    plt.plot(denoised_ecg[258840:260280])
+    plt.title("after low and highpass filtering.")
+
+    plt.show()
+
+    return denoised_ecg
+        
 
 def normalize(data):      
     data = np.nan_to_num(data)  # removing NaNs and Infs
@@ -68,6 +121,14 @@ for k in range(0,2): # first and second dataset
         symbols = np.array(annotation.symbol)
         samples = np.array(annotation.sample)
         p_signal = record.p_signal    # extract signal
+        ## extract lead two channel
+        if record_name == "114": #this record has inverted channels
+            p_signal = p_signal[:,1] # MLII      
+        else:
+            p_signal = p_signal[:,0] # MLII   
+
+        denoised = ecg_denoise(p_signal, symbols)
+        p_signal = denoised
 
         # test plot
         # plt.plot(p_signal[63315-5000:63315+500,0])
@@ -86,9 +147,7 @@ for k in range(0,2): # first and second dataset
         Rpeak_left = 103
         Rpeak_right = 247
 
-        # pad signal incase of array overflow on extracting beat
-        p_signal = p_signal[:,0] # MLII        
-        
+        ###pad signal incase of array overflow on extracting beat  
         # normalize between 0 and 1
         p_signal = normalize(p_signal)  
 

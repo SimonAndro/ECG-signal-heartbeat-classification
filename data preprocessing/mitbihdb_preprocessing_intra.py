@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
 import pywt
+from scipy import signal
+
 mit_bih_dir = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0'
 mit_bih_dest = '/home/simon/deep learning with python/data/mit-bih-arrhythmia-database-1.0.0-aami_annotations'
 
@@ -23,7 +25,7 @@ heartbeat_classes = [
 known_classes = np.array(['N','S','V','F','Q'])
 
 #combined dataset
-DS = ['117', '101', '106', '108', '109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', 
+DS = [ '101', '106', '108', '109', '112', '114', '115', '116', '118', '119', '122', '124', '201', '203', '205', '207', 
         '208', '209', '215', '220', '223', '230', '100', '103', '105', '111', '113', '117', '121', '123', '200', '202', '210',
         '212', '213', '214', '219', '221', '222', '228', '231', '232', '233', '234']
 
@@ -37,6 +39,9 @@ def normalize(data):
 
 def ecg_denoise(ecg,symbol):
 
+    ##
+    #remove baselinewander
+    ##
     data = []
     for i in range(len(ecg) - 1):
         Y = ecg[i]
@@ -50,15 +55,29 @@ def ecg_denoise(ecg,symbol):
     coeffs = pywt.wavedec(data, 'db8', level=8)  # 将信号进行小波分解
 
     #小波重构
-    denoised_ecg = pywt.waverec(np.multiply(coeffs, [0, 1, 1, 1, 1,1,1,1,1]).tolist(), 'db8')  # 将信号进行小波重构
+    bw_denoised = pywt.waverec(np.multiply(coeffs, [0, 1, 1, 1, 1,1,1,1,1]).tolist(), 'db8')  # 将信号进行小波重构
 
     #提取R波
     # 将读取到的annatations的心拍绘制到心电图上
     plt.figure()
     plt.plot(ecg[258840:260280])
+    plt.title("orignal signal")
+
+    plt.figure()
+    plt.plot(bw_denoised[258840:260280])
+    plt.title("after basewander removal")
+
+    ##
+    #remove baselinewander
+    ##
+    b, a = signal.butter(8, 0.1, 'lowpass')   #配置滤波器 8 表示滤波器的阶数
+    ecg_1 = signal.filtfilt(b, a, bw_denoised)  #dbw_denoised为要过滤的信号
+    b, a = signal.butter(8, 0.007, 'highpass')
+    denoised_ecg = signal.filtfilt(b, a,ecg_1 ) 
 
     plt.figure()
     plt.plot(denoised_ecg[258840:260280])
+    plt.title("after low and highpass filtering.")
 
     plt.show()
 
@@ -135,8 +154,6 @@ for record_name in DS:
 
     denoised = ecg_denoise(p_signal, symbols)
     p_signal = denoised
-
-    continue
 
     # test plot
     # plt.plot(p_signal[63315-5000:63315+500,0])
