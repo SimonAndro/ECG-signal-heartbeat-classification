@@ -1,4 +1,8 @@
+import sys
+sys.path.insert(0, '/home/simon/deep learning with python/ECG-signal-heartbeat-classification/')
+
 import os
+from matplotlib.cbook import flatten
 import pandas as pd
 import wfdb
 import matplotlib.pyplot as plt
@@ -11,8 +15,6 @@ from keras import models
 from keras import layers
 from keras.utils.vis_utils  import plot_model
 
-
-from utilities import load_ecg_signal
 
 # force use CPU instead of GPU
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
@@ -48,14 +50,28 @@ print("test data statistics", label_total)
 # plt.figure()
 
 # training globals
-num_epochs = 200
+num_epochs = 150
 
 # building the network
 def build_model(input_shape):
     model = models.Sequential()
-    model.add(layers.Dense(200, activation='tanh',
-                           input_shape=(input_shape,)))
-    model.add(layers.Dense(50, activation='tanh'))
+
+    # model.add(layers.Dense(200, activation='tanh',
+    #                        input_shape=(input_shape,)))
+    # model.add(layers.Dense(50, activation='tanh'))
+    # # end with a softmax layer with 5 units since we have 5 classes to predict
+    # model.add(layers.Dense(5, activation='softmax'))
+   
+    print('input_shape', input_shape)
+
+    model.add(layers.Conv1D(52, 15, activation='relu', input_shape=(input_shape,1,)))
+    model.add(layers.MaxPooling1D(96, 1))
+    model.add(layers.Conv1D(16, 15, activation='relu'))
+    model.add(layers.MaxPooling1D(44, 1))
+    model.add(layers.Conv1D(8, 6, activation='relu'))
+    model.add(layers.MaxPooling1D(19, 1))
+    model.add(layers.Flatten())
+    
     # end with a softmax layer with 5 units since we have 5 classes to predict
     model.add(layers.Dense(5, activation='softmax'))
     model.compile(optimizer='rmsprop',
@@ -67,7 +83,8 @@ def build_model(input_shape):
 model = build_model(train_data.shape[1])
 
 print(model.summary()) #print model summary
-plot_model(model,"dnn_intra_model.png")
+
+plot_model(model,"cnn_intra_model.png")
 
 history = model.fit(
     train_data,
@@ -77,6 +94,9 @@ history = model.fit(
     verbose=1,
     validation_data=(val_data, val_targets)
     )
+
+model.save('ecg_5cat_intra_cnn_classification.h5')
+
 training_loss_history = history.history['loss']
 validation_loss_history = history.history['val_loss']
 
